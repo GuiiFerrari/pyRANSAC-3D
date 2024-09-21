@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools >= 74.1", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyransac3d"
+version = "0.6.2"
+dependencies = ["numpy"]
+classifiers = [
+  'Programming Language :: Python :: 3',
+  'License :: OSI Approved :: Apache Software License',
+  'Operating System :: OS Independent',
+]
+dynamic = ["readme", "description", "urls"]
+requires-python = ">=3.6"
+authors = [{ name = "Leonardo Mariga", email = "leomariga@gmail.com" }]
+keywords = [
+  "point-cloud",
+  "segmentation",
+  "ransac",
+  "cuboid",
+  "3d-reconstruction",
+  "cylinder",
+  "planes",
+  "plane-detection",
+  "ransac-algorithm",
+]
+

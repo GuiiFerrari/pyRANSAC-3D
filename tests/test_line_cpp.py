@@ -1,34 +1,65 @@
-import open3d as o3d
 import numpy as np
-import random
-import copy 
 import pyransac3d as pyrsc
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 
-print('create noisy mesh')
-mesh_in = o3d.geometry.TriangleMesh.create_cylinder(radius=1, height=500.0)
-vertices = np.asarray(mesh_in.vertices)
-noise = 15
-vertices += np.random.logistic(0,noise, size=vertices.shape)
-mesh_in.vertices = o3d.utility.Vector3dVector(vertices)
-mesh_in.compute_vertex_normals()
-mesh_in.paint_uniform_color([0.2, 0.2, 0.8])
-o3d.visualization.draw_geometries([mesh_in])
-pcd_load=mesh_in.sample_points_uniformly(number_of_points=2000)
-o3d.visualization.draw_geometries([pcd_load])
 
-points = np.asarray(pcd_load.points)
+def generate_data() -> np.ndarray:
+    np.random.seed(0)
+    versor = np.array([0.0, 0.0, 1.0], dtype=float)
+    versor = versor / np.linalg.norm(versor)
+    point = np.array([0.0, 0.0, 0.0], dtype=float)
+    number_of_points = 2000
+    sx = 0.2
+    sy = 0.2
+    sz = 0.5
+    vector = np.random.randn(number_of_points, 3)
+    for column_index, sn in zip(range(3), (sx, sy, sz)):
+        vector[:, column_index] *= sn
+    aux = np.tile(versor, (number_of_points, 1))
+    hyperparameter = np.arange(1, number_of_points + 1).reshape(number_of_points, 1)
+    pointcloud = point + aux * hyperparameter + vector
+    return pointcloud
 
-line = pyrsc.Line_cpp()
 
-A, B, inliers = line.fit(points, thresh=15)
+def plot_pointcloud(
+    pc: np.ndarray, ransac_versor: np.ndarray, ransac_point: np.ndarray
+):
+    fig = plt.figure(dpi=200)
+    ax: Axes3D = fig.add_subplot(projection="3d")
+    ax.scatter(
+        xs=pc[:, 0], ys=pc[:, 1], zs=pc[:, 2], s=15, alpha=0.25, lw=0, marker="."
+    )
+    ax.view_init(vertical_axis="y")
+    ax.set_xlim(left=-2.0, right=2.0)
+    ax.set_ylim(bottom=-2.0, top=2.0)
+    ax.set_zlim(bottom=0.0, top=2000.0)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    hyper_parameter = (2000.0 - ransac_point[2]) / ransac_versor[2]
+    start_vector = ransac_versor * (-ransac_point[2] / ransac_versor[2]) + ransac_point
+    end_vector = ransac_versor * hyper_parameter + ransac_point
+    plot_vector = np.vstack((start_vector, end_vector))
+    ax.plot3D(
+        xs=plot_vector[:, 0],
+        ys=plot_vector[:, 1],
+        zs=plot_vector[:, 2],
+        c="red",
+        label="3D Line",
+    )
+    ax.legend()
+    plt.show()
+    print()
 
-R = pyrsc.get_rotationMatrix_from_vectors([0, 0, 1], A)
-plane = pcd_load.select_by_index(inliers).paint_uniform_color([1, 0, 0])
 
-mesh_cylinder = o3d.geometry.TriangleMesh.create_cylinder(radius=1, height=1000)
-mesh_cylinder.compute_vertex_normals()
-mesh_cylinder.paint_uniform_color([1, 0, 0])
-mesh_cylinder = mesh_cylinder.rotate(R, center=[0, 0, 0])
-mesh_cylinder = mesh_cylinder.translate((B[0], B[1], B[2]))
-o3d.visualization.draw_geometries([pcd_load, plane, mesh_cylinder])
+def main():
+    pointcloud = generate_data()
+    line = pyrsc.Line_cpp()
+    versor, point, inliers = line.fit(pointcloud, thresh=0.3)
+    plot_pointcloud(pc=pointcloud, ransac_versor=versor, ransac_point=point)
+
+
+if __name__ == "__main__":
+    main()
