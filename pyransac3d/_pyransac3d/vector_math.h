@@ -9,4 +9,6 @@ void cross_prod(double *left_vector, double *right_vector, double *target_vector
 
 void substract_vectors(double *left_vector, double *right_vector, double *target_vector);
 
+void normalize_vector(double *vector);
+
 #endif

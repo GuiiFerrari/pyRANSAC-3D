@@ -5,7 +5,7 @@
 #include <math.h>
 #include <random>
 #include <numeric>
-#include <algorithm>
+#include "vector_math.h"
 #define PY_SSIZE_T_CLEAN
 #define NPY_NO_DEPRECATED_API NPY_1_9_API_VERSION
 
@@ -20,23 +20,9 @@ Adaptation from https://github.com/jczamorac/Tracking_RANSAC
 extern "C"
 {
 
-#define M_PI 3.14159265358979323846
-
-	double norm(double *A)
-	{
-		return (double)sqrt((double)pow(A[0], 2.) + (double)pow(A[1], 2.) + (double)pow(A[2], 2.));
-	}
-
-	void cross_prod(double *C, double *A, double *B)
-	{
-		C[0] = (double)A[1] * B[2] - A[2] * B[1];
-		C[1] = (double)-(A[0] * B[2] - A[2] * B[0]);
-		C[2] = (double)A[0] * B[1] - A[1] * B[0];
-	}
-
 	int ransac_line(std::vector<std::vector<double>> &data, PyObject *PyInliers, PyObject *PyVersors, PyObject *PyPoints, int number_it, double min_dist, int min_inlier)
 	{
-		int indice1, indice2, loop, j, size = data.size(), num_inliers_1 = 0, best = 0;
+		int indice1, indice2, loop, j, size = (int)data.size(), num_inliers_1 = 0, best = 0;
 		std::vector<int> parcial;
 		double versor[3], point[3];
 		std::vector<double> pesos;
@@ -66,15 +52,12 @@ extern "C"
 				parcial_versor[loop] = (double)parcial_versor[loop] / norma1;
 			for (j = 0; j < size; j++)
 			{
-				for (loop = 0; loop < 3; loop++)
-					aux[loop] = point_A[loop] - data[j][loop];
-
-				cross_prod(cross, parcial_versor, aux);
+				substract_vectors(point_A, point_B, aux);
+				cross_prod(parcial_versor, aux, cross);
 				norma2 = norm(cross);
 
 				if (fabs(norma2) <= min_dist)
 				{
-					// parcial.push_back(j);
 					num_inliers_1 += 1;
 				}
 			}
@@ -97,7 +80,7 @@ extern "C"
 
 		for (j = 0; j < size; j++)
 		{
-			cross_prod(cross, versor, point);
+			cross_prod(versor, point, cross);
 			norma2 = norm(cross);
 			if (fabs(norma2) <= min_dist)
 				parcial.push_back(j);
@@ -116,12 +99,10 @@ extern "C"
 
 	static PyObject *Ransac(PyObject *self, PyObject *args)
 	{
-		// PyObject* list;
 		PyArrayObject *p;
 		int number_it, min_inliers;
 		double min_dist;
 		NpyIter *in_iter;
-		// if(!PyArg_ParseTuple(args, "Oidii", &list, &number_it, &min_dist, &min_inliers, &mode)){
 		if (!PyArg_ParseTuple(args, "O!idi", &PyArray_Type, &p, &number_it, &min_dist, &min_inliers))
 		{
 			return NULL;
@@ -137,9 +118,8 @@ extern "C"
 			PyErr_SetString(PyExc_TypeError, "Array must be two dimensional.");
 			return NULL;
 		}
-		// Py_ssize_t size = PyList_GET_SIZE(list);
-		int rows = PyArray_DIM(p, 0);
-		int cols = PyArray_DIM(p, 1);
+		int rows = (int)PyArray_DIM(p, 0);
+		int cols = (int)PyArray_DIM(p, 1);
 		if (cols != 3)
 		{
 			PyErr_SetString(PyExc_TypeError, "Array must have three columns.");
@@ -150,18 +130,14 @@ extern "C"
 		in_iter = NpyIter_New(p, NPY_ITER_READONLY, NPY_KEEPORDER, NPY_NO_CASTING, NULL);
 		double **in_dataptr = (double **)NpyIter_GetDataPtrArray(in_iter);
 		NpyIter_IterNextFunc *in_iternext = NpyIter_GetIterNext(in_iter, NULL);
-		// for(int i = 0; i < (int) size; i++){
 		for (int i = 0; i < rows; i++)
 		{
-			// PyObject* Point3D = PyList_GetItem(list, i);
 			std::vector<double> PartVec(rows);
 			for (int j = 0; j < cols; j++)
 			{
-				// PartVec[j] = PyFloat_AsDouble(PyList_GetItem(Point3D, j));
 				PartVec[j] = **in_dataptr;
 				in_iternext(in_iter);
 			}
-			// charge[i] = PyFloat_AsDouble(PyList_GetItem(Point3D, 3));
 			data.push_back(PartVec);
 		};
 		NpyIter_Deallocate(in_iter);
@@ -183,7 +159,7 @@ extern "C"
 	static struct PyModuleDef _pyransac3d = {
 		PyModuleDef_HEAD_INIT,
 		"_pyransac3d",
-		"Wrapper for pyransac3D.",
+		"Wrapper for pyransac3D C functions.",
 		-1,
 		myMethods};
 

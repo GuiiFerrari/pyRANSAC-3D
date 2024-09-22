@@ -4,11 +4,32 @@ import numpy
 
 from glob import glob
 
-# BASEDIR = os.path.relpath(os.path.dirname(__file__))
-CPPFILES = glob(os.path.join("pyransac3d", "_pyransac3d", "*.cpp"))
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+DIR_PATH = os.path.join("pyransac3d", "_pyransac3d")
+CPPFILES = glob(os.path.join(DIR_PATH, "*.cpp")) + glob(os.path.join(DIR_PATH, "*.c"))
+HEADERS = glob(os.path.join(DIR_PATH, "*.h"))
+HEADERS_FILES = [os.path.basename(path) for path in HEADERS]
 
 module = setuptools.Extension(
-    "pyransac3d._pyransac3d", sources=CPPFILES, include_dirs=[numpy.get_include()]
+    "pyransac3d._pyransac3d",
+    sources=CPPFILES,
+    include_dirs=[
+        numpy.get_include(),
+        os.path.join(BASEDIR, "pyransac3d", "_pyransac3d"),
+        os.path.join(BASEDIR, "pyransac3d"),
+        DIR_PATH,
+    ],
+    library_dirs=[
+        DIR_PATH,
+        os.path.join(BASEDIR, "pyransac3d", "_pyransac3d"),
+        os.path.join(BASEDIR, "pyransac3d"),
+        # os.path.join(BASEDIR, "pyransac3d", "_pyransac3d"),
+        "user32",
+    ],
+    extra_compile_args=[r"-O2"],
+    # libraries=["user32"],
+    # depends=HEADERS_FILES,
+    # extra_link_args=[],
 )
 
 with open("README.md", "r") as fh:
@@ -42,5 +63,7 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
     ext_modules=[module],
-    install_requires=["numpy"],
+    install_requires=["setuptools >= 74.1", "numpy"],
+    include=["pyransac/_pyransac/*"],
+    include_package_data=True,
 )

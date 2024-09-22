@@ -1,1 +1,1 @@
-graft = pyransac3d/_pyransac3d
+recursive-include pyransac3d/_pyransac3d *.h
